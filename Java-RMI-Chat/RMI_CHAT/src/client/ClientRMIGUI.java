@@ -1,12 +1,10 @@
 package client;
 
-import java.awt.BorderLayout;
-import java.awt.Container;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Insets;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.rmi.RemoteException;
 
 import javax.swing.BorderFactory;
@@ -71,7 +69,7 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 
 	public ClientRMIGUI(){
 			
-		frame = new JFrame("Client Chat Console");	
+		frame = new JFrame("Trò chuyện");
 	
 		//-----------------------------------------
 		/*
@@ -84,7 +82,7 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 		        
 		    	if(chatClient != null){
 			    	try {
-			        	sendMessage("Bye all, I am leaving");
+			        	sendMessage("Tôi đi đây");
 			        	chatClient.serverIF.leaveChat(name);
 					} catch (RemoteException e) {
 						e.printStackTrace();
@@ -126,7 +124,7 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	 * @return
 	 */
 	public JPanel getTextPanel(){
-		String welcome = "Welcome enter your name and press Start to begin\n";
+		String welcome = "Nhập tên và ấn nút Start để bắt đầu trò chuyện\n";
 		textArea = new JTextArea(welcome, 14, 34);
 		textArea.setMargin(new Insets(10, 10, 10, 10));
 		textArea.setFont(meiryoFont);
@@ -163,13 +161,13 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	public JPanel getUsersPanel(){
 
 		userPanel = new JPanel(new BorderLayout());
-		String  userStr = " Current Users      ";
+		String  userStr = " Người dùng hoạt động";
 
 		JLabel userLabel = new JLabel(userStr, JLabel.CENTER);
 		userPanel.add(userLabel, BorderLayout.NORTH);
 		userLabel.setFont(new Font("Meiryo", Font.PLAIN, 16));
 
-		String[] noClientsYet = {"No other users"};
+		String[] noClientsYet = {"Không có ai"};
 		setClientPanel(noClientsYet);
 
 		clientPanel.setFont(meiryoFont);
@@ -184,17 +182,17 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	 * selectable list of currently connected users
 	 * @param currClients
 	 */
-    public void setClientPanel(String[] currClients) {  	
+    public void setClientPanel(String[] currClients) {
     	clientPanel = new JPanel(new BorderLayout());
         listModel = new DefaultListModel<String>();
-        
+
         for(String s : currClients){
         	listModel.addElement(s);
         }
         if(currClients.length > 1){
         	privateMsgButton.setEnabled(true);
         }
-        
+
         //Create the list and put it in a scroll pane.
         list = new JList<String>(listModel);
         list.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -210,24 +208,27 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	 * Make the buttons and add the listener
 	 * @return
 	 */
-	public JPanel makeButtonPanel() {		
-		sendButton = new JButton("Send ");
+	public JPanel makeButtonPanel() {
+		sendButton = new JButton("Gửi ");
 		sendButton.addActionListener(this);
 		sendButton.setEnabled(false);
 
-        privateMsgButton = new JButton("Send PM");
+        privateMsgButton = new JButton("Gửi riêng");
+		privateMsgButton.setBackground(new Color(123, 0, 255));
         privateMsgButton.addActionListener(this);
         privateMsgButton.setEnabled(false);
 
-		startButton = new JButton("Start ");
+		startButton = new JButton("Bắt đầu chat ");
+		startButton.setBackground(new Color(0, 255, 225));
+		sendButton.setBackground(new Color(14, 252, 35));
 		startButton.addActionListener(this);
-		
+
 		JPanel buttonPanel = new JPanel(new GridLayout(4, 1));
 		buttonPanel.add(privateMsgButton);
 		buttonPanel.add(new JLabel(""));
 		buttonPanel.add(startButton);
 		buttonPanel.add(sendButton);
-		
+
 		return buttonPanel;
 	}
 	
@@ -244,7 +245,7 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 				if(name.length() != 0){
 					frame.setTitle(name + "'s console ");
 					textField.setText("");
-					textArea.append("username : " + name + " connecting to chat...\n");							
+					textArea.append(name + " bắt đầu chat...\n");
 					getConnected(name);
 					if(!chatClient.connectionProblem){
 						startButton.setEnabled(false);
@@ -252,9 +253,27 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 						}
 				}
 				else{
-					JOptionPane.showMessageDialog(frame, "Enter your name to Start");
+					JOptionPane.showMessageDialog(frame, "Nhập tên để trò chuyện");
 				}
 			}
+
+			textField.addKeyListener(new KeyAdapter() {
+				@Override
+				public void keyPressed(KeyEvent e) {
+					if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+						try {
+							if (sendButton.isEnabled()) {
+								String message = textField.getText();
+								textField.setText("");
+								sendMessage(message);
+								System.out.println("Sending message: " + message);
+							}
+						} catch (RemoteException remoteExc) {
+							remoteExc.printStackTrace();
+						}
+					}
+				}
+			});
 
 			//get text and clear textField
 			if(e.getSource() == sendButton){
@@ -296,13 +315,8 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	}
 
 
-	/**
-	 * Send a message, to be relayed, only to selected chatters
-	 * @param chatMessage
-	 * @throws RemoteException
-	 */
 	private void sendPrivate(int[] privateList) throws RemoteException {
-		String privateMessage = "[PM from " + name + "] :" + encryptMessage(message) + "\n";
+		String privateMessage = "[Tin nhắn từ " + name + "] :" + encryptMessage(message) + "\n";
 		chatClient.serverIF.sendPM(privateList, privateMessage);
 	}
 	private String encryptMessage(String message) {
@@ -325,10 +339,9 @@ public class ClientRMIGUI extends JFrame implements ActionListener{
 	 */
 	private void getConnected(String userName) throws RemoteException{
 		//remove whitespace and non word characters to avoid malformed url
-		String cleanedUserName = userName.replaceAll("\\s+","_");
-		cleanedUserName = userName.replaceAll("\\W+","_");
+
 		try {		
-			chatClient = new ChatClient3(this, cleanedUserName);
+			chatClient = new ChatClient3(this, userName);
 			chatClient.startClient();
 		} catch (RemoteException e) {
 			e.printStackTrace();
